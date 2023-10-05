@@ -5,7 +5,7 @@ class Field:
         self.order_number = None
 
     def check_availability(self):
-        if self.order_number is not None:
-            return False
-        else:
+        if self.order_number is None:
             return True
+        else:
+            return False
