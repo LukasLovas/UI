@@ -18,25 +18,46 @@ def get_starting_position():
     print("Starting position: (x: " + str(x) + " y: " + str(y) + ")")
     return board[x][y]
 
-def validate_move(move,matrix):
+
+def validate_move(move, matrix):
     if 0 <= move[0] < len(matrix) and 0 <= move[1] < len(matrix[0]) and matrix[move[0]][move[1]].check_availability():
         return True
     else:
         return False
 
+
 def calculate_possible_moves(matrix, current_field):
-    all_moves = []
     possible_moves = []
     position = (current_field.x, current_field.y)
     for vector in move_vectors:
-        x, y = position[0] + vector[0], position[1] + vector[1]
-        all_moves.append((x, y))
-    for move in all_moves:
-        if validate_move(move,matrix):
-            possible_moves.append(move)
+        (x, y) = (position[0] + vector[0], position[1] + vector[1])
+        if validate_move((x, y), matrix):
+            possible_moves.append(vector)
     return possible_moves
 
-def move():
+
+def move(board, current_field, move_vectors, order_counter):
+    if order_counter == len(board[0]):
+        return True
+
+    for vector in move_vectors:
+        new_coords = (current_field.x + vector[0], current_field.y + vector[1])
+        new_field = board[new_coords[0]][new_coords[1]]
+        current_field = new_field
+        order_counter += 1
+        current_field.order_number = order_counter
+        dummy_matrix = [[board[j][i].order_number for j in range(len(board[0]))] for i in range(len(board[0]))]
+        order_number_matrix = [[dummy_matrix[i][j] for j in range(len(dummy_matrix))] for i in range(len(dummy_matrix[0]))] #transponse this matrix as well
+        for row in order_number_matrix:
+            for item in row:
+                print(f"{item:>{3}}", end=" ")
+            print()
+        print("\n----------------------------------\n")
+        if move(board, current_field, calculate_possible_moves(board, current_field), order_counter):
+            return True
+        board[new_coords[1]][new_coords[0]].order_number = "-"
+    return False
+
 
 if __name__ == "__main__":
     move_vectors = [(1, 2), (1, -2), (2, 1), (2, -1), (-1, 2), (-1, -2), (-2, 1), (-2, -1)]
@@ -44,7 +65,4 @@ if __name__ == "__main__":
     board = board_setup()
     field = get_starting_position()
     order_counter = 1
-    while game_cycle:
-        move()
-        print(calculate_possible_moves(board, field))
-        break
+    move(board, field, calculate_possible_moves(board, field), order_counter)
