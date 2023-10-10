@@ -10,6 +10,7 @@ def board_setup():
         print()
     return matrix
 
+
 def get_starting_position():
     x = int(input("Define starting position (X): "))
     y = int(input("Define starting position (Y): "))
@@ -36,7 +37,7 @@ def calculate_possible_moves(matrix, current_field):
 
 
 def move(board, current_field, move_vectors, order_counter):
-    if order_counter == len(board[0])**2:
+    if order_counter == len(board) * len(board[0]):
         return True
 
     if not move_vectors:
@@ -44,18 +45,26 @@ def move(board, current_field, move_vectors, order_counter):
 
     for vector in move_vectors:
         new_coords = (current_field.x + vector[0], current_field.y + vector[1])
-        new_field = board[new_coords[1]][new_coords[0]]
-        order_counter += 1
-        new_field.order_number = order_counter
-        dummy_matrix = [[board[i][j].order_number for j in range(len(board[0]))] for i in range(len(board[0]))]
-        for row in dummy_matrix:
-            for item in row:
-                print(f"{item:>{3}}", end=" ")
-            print()
-        print("\n----------------------------------\n")
-        if move(board, new_field, calculate_possible_moves(board, current_field), order_counter):
-            return True
-        board[new_coords[1]][new_coords[0]].order_number = "-"
+        if validate_move(new_coords, board):
+            new_field = board[new_coords[1]][new_coords[0]]
+            if new_field.order_number == "-":
+                new_field.order_number = order_counter + 1
+                dummy_matrix = [[board[j][i].order_number for j in range(len(board[0]))] for i in range(len(board[0]))]
+                order_number_matrix = [[dummy_matrix[i][j] for j in range(len(dummy_matrix))] for i in
+                                       range(len(dummy_matrix[0]))]  # transponse this matrix as well
+                for row in order_number_matrix:
+                    for item in row:
+                        print(f"{item:>{3}}", end=" ")
+                    print()
+                print("\n----------------------------------\n")
+                if input("continue?: ") != "":
+                    break
+                if move(board, new_field, calculate_possible_moves(board, new_field), order_counter + 1):
+                    return True
+                new_field.order_number = "-"  # Backtrack
+                print("Iteration failed for " + str(
+                    (new_field.x, new_field.y)) + ", backtracking to order number: " + str(order_counter) + ", number " + str(order_counter + 1) + " placed elsewhere.")
+
     return False
 
 
@@ -65,4 +74,7 @@ if __name__ == "__main__":
     board = board_setup()
     field = get_starting_position()
     order_counter = 1
-    move(board, field, calculate_possible_moves(board, field), order_counter)
+    if move(board, field, calculate_possible_moves(board, field), order_counter):
+        print("Riesenie existuje")
+    else:
+        print("Riesenie neexistuje")
