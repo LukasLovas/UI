@@ -1,4 +1,5 @@
 from Field import Field
+import time
 
 
 def board_setup():
@@ -36,45 +37,61 @@ def calculate_possible_moves(matrix, current_field):
     return possible_moves
 
 
-def move(board, current_field, move_vectors, order_counter):
-    if order_counter == len(board) * len(board[0]):
-        return True
+def move(board, current_field, move_vectors, order_counter, moves, start_time):
+    time_elapsed = time.time() - start_time
+    if time_elapsed >= TIME_LIMIT:
+        print("Timer ran out, stopping the program.")
+        return
 
-    if not move_vectors:
+    moves += 1
+    if moves <= MAX_MOVES:
+        if order_counter == len(board) * len(board[0]):
+            return True
+
+        if not move_vectors:
+            return False
+
+        for vector in move_vectors:
+            new_coords = (current_field.x + vector[0], current_field.y + vector[1])
+            if validate_move(new_coords, board):
+                new_field = board[new_coords[1]][new_coords[0]]
+                if new_field.order_number == "-":
+                    new_field.order_number = order_counter + 1
+                    dummy_matrix = [[board[j][i].order_number for j in range(len(board[0]))] for i in
+                                    range(len(board[0]))]
+                    order_number_matrix = [[dummy_matrix[i][j] for j in range(len(dummy_matrix))] for i in
+                                           range(len(dummy_matrix[0]))]  # transponse this matrix as well
+                    for row in order_number_matrix:
+                        for item in row:
+                            print(f"{item:>{3}}", end=" ")
+                        print()
+                    print("\n----------------------------------\n")
+                    # if input("continue?: ") != "":
+                    # break
+                    if move(board, new_field, calculate_possible_moves(board, new_field), order_counter + 1, moves,start_time):
+                        return True
+                    new_field.order_number = "-"  # Backtrack
+                    print("Iteration failed for " + str(
+                        (new_field.x, new_field.y)) + ", backtracking to order number: " + str(
+                        order_counter) + ", number " + str(order_counter + 1) + " placed elsewhere.")
+
         return False
-
-    for vector in move_vectors:
-        new_coords = (current_field.x + vector[0], current_field.y + vector[1])
-        if validate_move(new_coords, board):
-            new_field = board[new_coords[1]][new_coords[0]]
-            if new_field.order_number == "-":
-                new_field.order_number = order_counter + 1
-                dummy_matrix = [[board[j][i].order_number for j in range(len(board[0]))] for i in range(len(board[0]))]
-                order_number_matrix = [[dummy_matrix[i][j] for j in range(len(dummy_matrix))] for i in
-                                       range(len(dummy_matrix[0]))]  # transponse this matrix as well
-                for row in order_number_matrix:
-                    for item in row:
-                        print(f"{item:>{3}}", end=" ")
-                    print()
-                print("\n----------------------------------\n")
-                if input("continue?: ") != "":
-                    break
-                if move(board, new_field, calculate_possible_moves(board, new_field), order_counter + 1):
-                    return True
-                new_field.order_number = "-"  # Backtrack
-                print("Iteration failed for " + str(
-                    (new_field.x, new_field.y)) + ", backtracking to order number: " + str(order_counter) + ", number " + str(order_counter + 1) + " placed elsewhere.")
-
-    return False
+    else:
+        print("Maximum move attempts exceeded, stopping the program.")
+        return
 
 
 if __name__ == "__main__":
+    TIME_LIMIT = 15
+    MAX_MOVES = 50000
+    start_time = time.time()
+    moves = 0
     move_vectors = [(1, 2), (1, -2), (2, 1), (2, -1), (-1, 2), (-1, -2), (-2, 1), (-2, -1)]
     game_cycle = True
     board = board_setup()
     field = get_starting_position()
     order_counter = 1
-    if move(board, field, calculate_possible_moves(board, field), order_counter):
+    if move(board, field, calculate_possible_moves(board, field), order_counter, moves,start_time):
         print("Riesenie existuje")
     else:
         print("Riesenie neexistuje")
