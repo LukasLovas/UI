@@ -16,7 +16,7 @@ def calculate_total_distance_for_solution(solution):
 
     for i in range(num_cities):
         from_city = solution[i]
-        to_city = solution[(i + 1) % num_cities]  # Wrap around to the first city
+        to_city = solution[(i + 1) % num_cities]
         total_distance += math.sqrt((from_city.x - to_city.x) ** 2 + (from_city.y - from_city.y) ** 2)
 
     return total_distance
@@ -34,9 +34,22 @@ def generate_random_node_locations(width, height):
     return nodes
 
 
+def get_distance(node1, node2):
+    return math.sqrt((node1.x - node2.x) ** 2 + (node1.y - node2.y) ** 2)
+
+
 def initialize_first_solution(nodes):
-    initial_solution = random.sample(nodes, len(nodes))
-    return initial_solution
+    current_node = random.choice(nodes)
+    best_solution = [current_node]
+
+    free_nodes = set(nodes)
+    free_nodes.remove(current_node)
+    while free_nodes:
+        next_node = min(free_nodes, key=lambda x: get_distance(current_node, x))
+        free_nodes.remove(next_node)
+        best_solution.append(next_node)
+        current_node = next_node
+    return best_solution
 
 
 def get_neighbors(solution, max_neighbours):
@@ -181,6 +194,7 @@ if __name__ == '__main__':
     width = int(input("Urči vertikálnu vzdialenosť: "))
     height = int(input("Urči horizontálnu vzdialenosť: "))
     nodes = generate_random_node_locations(width, height)
+    print("Vzdialenosť prvotného riešenia: " + str(calculate_total_distance_for_solution(nodes)))
     max_iterations = 50
     result = start()
     print("Vzdialenosť najlepšieho riešenia: " + str(calculate_total_distance_for_solution(result)))
