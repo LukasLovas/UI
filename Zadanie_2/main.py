@@ -17,7 +17,7 @@ def calculate_total_distance_for_solution(solution):
     for i in range(num_cities):
         from_city = solution[i]
         to_city = solution[(i + 1) % num_cities]
-        total_distance += math.sqrt((from_city.x - to_city.x) ** 2 + (from_city.y - from_city.y) ** 2)
+        total_distance += math.sqrt((from_city.x - to_city.x) ** 2 + (from_city.y - to_city.y) ** 2)
 
     return total_distance
 
@@ -49,6 +49,7 @@ def initialize_first_solution(nodes):
         free_nodes.remove(next_node)
         best_solution.append(next_node)
         current_node = next_node
+    print("Vzdialenosť prvotného riešenia: " + str(calculate_total_distance_for_solution(best_solution)))
     return best_solution
 
 
@@ -96,7 +97,7 @@ def tabu_search(nodes, tabu_list_length, max_iterations):
     iteration = 0
     max_neighbours = 150
 
-    while iteration < max_iterations:
+    while iteration <= max_iterations:
         neighbors = get_neighbors(current_solution, max_neighbours)
         best_neighbor = fitness_function(neighbors, tabu_list)
 
@@ -118,11 +119,54 @@ def update_tabu_list(current_solution, tabu_list, tabu_list_length):
         tabu_list.pop(0)
 
 
-# ------------------- END TABU -------------------------------#
+# ------------------- END TABU ------------------------------- #
 
-# -------------------- ANNEALING ------------------------------#
-def simulated_annealing():
-    pass
+# -------------------- ANNEALING ------------------------------ #
+def simulated_annealing(nodes, max_iterations):
+    temperature = 5000
+    cooling_rate = 0.99
+    max_neighbours = max_iterations + 1
+    iteration = 0
+    indifferent_occurences_counter = 0
+    no_cost_difference_counter = 0
+    current_solution = initialize_first_solution(nodes)
+    best_solution = current_solution
+
+    while iteration <= max_iterations and indifferent_occurences_counter < 1500 and no_cost_difference_counter < 15000:
+
+        neighbors = get_neighbors(current_solution, max_neighbours)
+        neighbor = random.choice(neighbors)
+
+        current_distance = calculate_total_distance_for_solution(current_solution)
+        neighbor_distance = calculate_total_distance_for_solution(neighbor)
+        distance_difference = neighbor_distance - current_distance
+
+        if distance_difference > 0:
+            current_solution = neighbor
+            indifferent_occurences_counter = 0
+            no_cost_difference_counter = 0
+
+        elif distance_difference == 0:
+            current_solution = neighbor
+            no_cost_difference_counter += 1
+            indifferent_occurences_counter = 0
+        else:
+            if random.uniform(0, 1) <= math.exp(float(distance_difference) / float(temperature)):
+                current_solution = neighbor
+                indifferent_occurences_counter = 0
+                no_cost_difference_counter = 0
+            else:
+                indifferent_occurences_counter += 1
+                no_cost_difference_counter += 1
+
+        if calculate_total_distance_for_solution(current_solution) < calculate_total_distance_for_solution(
+                best_solution):
+            best_solution = current_solution
+
+        temperature *= cooling_rate
+        iteration += 1
+
+    return best_solution
 
 
 # ----------------------------------- END ANNEALING ------------------------------ #
@@ -139,52 +183,46 @@ def start():
                 tabu_list_lenght = 30
             result = tabu_search(nodes, tabu_list_lenght, max_iterations)
         elif mode == 2:
-            result = simulated_annealing()
+            result = simulated_annealing(nodes, max_iterations+20)
     return result
 
 
 def visualize_result(result):
     def start_animation():
-        # Initialize the order of cities visited
         order_of_cities = []
 
-        # Draw cities in red (initial state)
         for city in result:
             city.circle = canvas.create_oval(city.x - 5, city.y - 5, city.x + 5, city.y + 5, fill="red", width=2)
             order_of_cities.append(city)
 
-        # Color the first city gold
         first_city = order_of_cities[0]
         canvas.itemconfig(first_city.circle, fill="gold")
-
-        # Traverse the cities
         for i in range(1, len(order_of_cities)):
             from_city = order_of_cities[i - 1]
             to_city = order_of_cities[i]
 
-            # Paint the next city in green
             canvas.itemconfig(to_city.circle, fill="green")
 
-            # Draw an arrow to the next city
             canvas.create_line(from_city.x, from_city.y, to_city.x, to_city.y, fill="blue", arrow=tk.LAST)
-            canvas.update()  # Update the canvas to show the changes
-            canvas.after(1000)  # Add a delay of 1000 milliseconds (1 second)
+            print(str(math.sqrt((from_city.x - to_city.x) ** 2 + (from_city.y - to_city.y) ** 2)))
+            canvas.update()
+            canvas.after(800)
 
-            # Paint the current city in red (leaving)
             canvas.itemconfig(to_city.circle, fill="red")
 
-        # Connect the last city back to the starting city
         last_city = order_of_cities[-1]
         to_first_city = order_of_cities[0]
         canvas.create_line(last_city.x, last_city.y, to_first_city.x, to_first_city.y, fill="blue", arrow=tk.LAST)
-        canvas.update()  # Update the canvas to show the final connection
+        print(str(math.sqrt((last_city.x - to_first_city.x) ** 2 + (last_city.y - to_first_city.y) ** 2)))
+
+        canvas.update()
 
     window = tk.Tk()
-    window.title("Traveling Salesman Problem Visualization")
+    window.title("Traveling Salesman Problem Vizualizácia")
     canvas = tk.Canvas(window, width=500, height=500)
     canvas.pack()
 
-    start_button = tk.Button(window, text="Start Animation", command=start_animation)
+    start_button = tk.Button(window, text="Štart", command=start_animation)
     start_button.pack()
 
     window.mainloop()
@@ -194,7 +232,6 @@ if __name__ == '__main__':
     width = int(input("Urči vertikálnu vzdialenosť: "))
     height = int(input("Urči horizontálnu vzdialenosť: "))
     nodes = generate_random_node_locations(width, height)
-    print("Vzdialenosť prvotného riešenia: " + str(calculate_total_distance_for_solution(nodes)))
     max_iterations = 50
     result = start()
     print("Vzdialenosť najlepšieho riešenia: " + str(calculate_total_distance_for_solution(result)))
