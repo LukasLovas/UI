@@ -1,7 +1,10 @@
 import random
+import time
 import math
 import tkinter as tk
 from Node import Node
+from Solution import Solution_Annealing
+from Solution import Solution_Tabu
 
 
 def generate_random_location(width, height):
@@ -53,18 +56,29 @@ def initialize_first_solution(nodes):
     return best_solution
 
 
-def get_neighbors(solution, max_neighbours):
+# def get_neighbors(solution, max_neighbours):
+#     neighbors = []
+#     while len(neighbors) <= max_neighbours:
+#         neighbor = solution.copy()
+#         pos1 = random.randint(0, 19)
+#         pos2 = random.randint(0, 19)
+#         if pos1 == pos2:
+#             pass
+#         else:
+#             neighbor[pos1], neighbor[pos2] = neighbor[pos2], neighbor[pos1]
+#             if neighbor not in neighbors:
+#                 neighbors.append(neighbor)
+#
+#     return neighbors
+
+def get_neighbors(solution):
     neighbors = []
-    while len(neighbors) <= max_neighbours:
-        neighbor = solution.copy()
-        pos1 = random.randint(0, 19)
-        pos2 = random.randint(0, 19)
-        if pos1 == pos2:
-            pass
-        else:
-            neighbor[pos1], neighbor[pos2] = neighbor[pos2], neighbor[pos1]
-            if neighbor not in neighbors:
-                neighbors.append(neighbor)
+    num_cities = len(solution)
+
+    for i in range(num_cities):
+        for j in range(i + 1, num_cities):
+            neighbor = solution[:i] + solution[i:j][::-1] + solution[j:]
+            neighbors.append(neighbor)
 
     return neighbors
 
@@ -78,6 +92,7 @@ def compare_solutions(best_neighbor, best_solution):
 def fitness_function(neighbors, tabu_list):
     best_neighbor = neighbors[0]
     best_distance = calculate_total_distance_for_solution(neighbors[0])
+    tabu_list_uses = 0
 
     for neighbor in neighbors:
         neighbor_distance = calculate_total_distance_for_solution(neighbor)
@@ -85,21 +100,25 @@ def fitness_function(neighbors, tabu_list):
         if neighbor not in tabu_list and neighbor_distance < best_distance:
             best_neighbor = neighbor
             best_distance = neighbor_distance
+        elif neighbor in tabu_list:
+            tabu_list_uses += 1
 
-    return best_neighbor
+    return best_neighbor, tabu_list_uses
 
 
 # -------------------------- TABU --------------------------------#
 def tabu_search(nodes, tabu_list_length, max_iterations):
+    timer_start = time.time()
     current_solution = initialize_first_solution(nodes)
     best_solution = current_solution
     tabu_list = []
     iteration = 0
-    max_neighbours = 150
+    tabu_list_uses = 0
 
     while iteration <= max_iterations:
-        neighbors = get_neighbors(current_solution, max_neighbours)
-        best_neighbor = fitness_function(neighbors, tabu_list)
+        neighbors = get_neighbors(current_solution)
+        best_neighbor, addition_tabu = fitness_function(neighbors, tabu_list)
+        tabu_list_uses += addition_tabu
 
         if compare_solutions(best_neighbor, best_solution):
             best_solution = best_neighbor
@@ -108,8 +127,8 @@ def tabu_search(nodes, tabu_list_length, max_iterations):
         update_tabu_list(current_solution, tabu_list, tabu_list_length)
 
         iteration += 1
-
-    return best_solution
+    timer_stop = time.time() - timer_start
+    return Solution_Tabu(len(nodes), max_iterations, tabu_list_uses, best_solution, timer_stop)
 
 
 def update_tabu_list(current_solution, tabu_list, tabu_list_length):
@@ -122,56 +141,45 @@ def update_tabu_list(current_solution, tabu_list, tabu_list_length):
 # ------------------- END TABU ------------------------------- #
 
 # -------------------- ANNEALING ------------------------------ #
-def simulated_annealing(nodes, max_iterations):
-    temperature = 5000
-    cooling_rate = 0.99
-    max_neighbours = max_iterations + 1
-    iteration = 0
-    indifferent_occurences_counter = 0
-    no_cost_difference_counter = 0
+def simulated_annealing(nodes, initial_temperature, cooling_rate, max_iterations):
+    timer_start = time.time()
     current_solution = initialize_first_solution(nodes)
     best_solution = current_solution
+    current_distance = calculate_total_distance_for_solution(current_solution)
+    best_distance = current_distance
+    iteration = 0
+    best_solution_change = 0
 
-    while iteration <= max_iterations and indifferent_occurences_counter < 1500 and no_cost_difference_counter < 15000:
+    temperature = initial_temperature
 
-        neighbors = get_neighbors(current_solution, max_neighbours)
-        neighbor = random.choice(neighbors)
-
-        current_distance = calculate_total_distance_for_solution(current_solution)
+    while iteration <= max_iterations:
+        neighbor = random.choice(get_neighbors(current_solution))
         neighbor_distance = calculate_total_distance_for_solution(neighbor)
         distance_difference = neighbor_distance - current_distance
+        try:
+            acceptance_probability = math.exp(-distance_difference / temperature)
+        except OverflowError:
+            acceptance_probability = math.inf
 
-        if distance_difference > 0:
+        if distance_difference < 0 or random.random() < acceptance_probability:
             current_solution = neighbor
-            indifferent_occurences_counter = 0
-            no_cost_difference_counter = 0
+            current_distance = neighbor_distance
 
-        elif distance_difference == 0:
-            current_solution = neighbor
-            no_cost_difference_counter += 1
-            indifferent_occurences_counter = 0
-        else:
-            if random.uniform(0, 1) <= math.exp(float(distance_difference) / float(temperature)):
-                current_solution = neighbor
-                indifferent_occurences_counter = 0
-                no_cost_difference_counter = 0
-            else:
-                indifferent_occurences_counter += 1
-                no_cost_difference_counter += 1
-
-        if calculate_total_distance_for_solution(current_solution) < calculate_total_distance_for_solution(
-                best_solution):
-            best_solution = current_solution
+            if current_distance < best_distance:
+                best_solution_change += 1
+                best_solution = current_solution
+                best_distance = current_distance
 
         temperature *= cooling_rate
         iteration += 1
 
-    return best_solution
+    timer_stop = time.time() - timer_start
+    return Solution_Annealing(len(nodes), initial_temperature, cooling_rate, max_iterations, best_solution_change,
+                              best_solution,timer_stop)
 
 
 # ----------------------------------- END ANNEALING ------------------------------ #
 def start():
-    mode = None
     result = None
     while result is None:
         mode = int(
@@ -181,10 +189,12 @@ def start():
                 tabu_list_lenght = int(input("Zadaj velkosť tabu listu: "))
             except ValueError:
                 tabu_list_lenght = 30
+            max_iterations = 50
             result = tabu_search(nodes, tabu_list_lenght, max_iterations)
         elif mode == 2:
-            result = simulated_annealing(nodes, max_iterations+20)
-    return result
+            max_iterations = 5000
+            result = simulated_annealing(nodes, 10000, 0.85, max_iterations)
+    return result, mode
 
 
 def visualize_result(result):
@@ -232,7 +242,18 @@ if __name__ == '__main__':
     width = int(input("Urči vertikálnu vzdialenosť: "))
     height = int(input("Urči horizontálnu vzdialenosť: "))
     nodes = generate_random_node_locations(width, height)
-    max_iterations = 50
-    result = start()
-    print("Vzdialenosť najlepšieho riešenia: " + str(calculate_total_distance_for_solution(result)))
-    visualize_result(result)
+    result, mode = start()
+    if mode == 1:
+        print("Vzdialenosť najlepšieho riešenia: " + str(calculate_total_distance_for_solution(result.solution)))
+        print(f"Najlepšie riešenie malo: {result.num_of_cities} miest\n"
+              f"pre {result.max_iterations} iterácií algoritmu zabránil tabu list "
+              f"vojdeniu do lokálneho extrému {result.tabu_list_uses} krát.\n"
+              f"Algoritmus potreboval {result.timer} sekúnd na zbehnutie programu")
+    else:
+        print("Vzdialenosť najlepšieho riešenia: " + str(calculate_total_distance_for_solution(result.solution)))
+        print(f"Najlepšie riešenie malo: {result.num_of_cities} miest\n"
+              f"začiatočnú teplotu: {result.initial_temp}\n"
+              f"ochladzovanie: {result.cooling_rate}\n"
+              f"pre {result.max_iterations} iterácií algoritmu sa najlepšie riešenie zmenilo {result.best_solution_change_counter} krát.\n"
+              f"Algoritmus potreboval {result.timer} sekúnd na zbehnutie programu")
+    visualize_result(result.solution)
