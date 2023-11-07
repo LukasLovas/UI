@@ -92,7 +92,6 @@ def compare_solutions(best_neighbor, best_solution):
 def fitness_function(neighbors, tabu_list):
     best_neighbor = neighbors[0]
     best_distance = calculate_total_distance_for_solution(neighbors[0])
-    tabu_list_uses = 0
 
     for neighbor in neighbors:
         neighbor_distance = calculate_total_distance_for_solution(neighbor)
@@ -100,10 +99,9 @@ def fitness_function(neighbors, tabu_list):
         if neighbor not in tabu_list and neighbor_distance < best_distance:
             best_neighbor = neighbor
             best_distance = neighbor_distance
-        elif neighbor in tabu_list:
-            tabu_list_uses += 1
 
-    return best_neighbor, tabu_list_uses
+
+    return best_neighbor
 
 
 # -------------------------- TABU --------------------------------#
@@ -113,12 +111,10 @@ def tabu_search(nodes, tabu_list_length, max_iterations):
     best_solution = current_solution
     tabu_list = []
     iteration = 0
-    tabu_list_uses = 0
 
     while iteration <= max_iterations:
         neighbors = get_neighbors(current_solution)
-        best_neighbor, addition_tabu = fitness_function(neighbors, tabu_list)
-        tabu_list_uses += addition_tabu
+        best_neighbor = fitness_function(neighbors, tabu_list)
 
         if compare_solutions(best_neighbor, best_solution):
             best_solution = best_neighbor
@@ -128,7 +124,7 @@ def tabu_search(nodes, tabu_list_length, max_iterations):
 
         iteration += 1
     timer_stop = time.time() - timer_start
-    return Solution_Tabu(len(nodes), max_iterations, tabu_list_uses, best_solution, timer_stop)
+    return Solution_Tabu(len(nodes), max_iterations, best_solution, timer_stop)
 
 
 def update_tabu_list(current_solution, tabu_list, tabu_list_length):
@@ -246,9 +242,7 @@ if __name__ == '__main__':
     if mode == 1:
         print("Vzdialenosť najlepšieho riešenia: " + str(calculate_total_distance_for_solution(result.solution)))
         print(f"Najlepšie riešenie malo: {result.num_of_cities} miest\n"
-              f"pre {result.max_iterations} iterácií algoritmu zabránil tabu list "
-              f"vojdeniu do lokálneho extrému {result.tabu_list_uses} krát.\n"
-              f"Algoritmus potreboval {result.timer} sekúnd na zbehnutie programu")
+              f"pre {result.max_iterations} iterácií algoritmus potreboval {result.timer} sekúnd na zbehnutie programu")
     else:
         print("Vzdialenosť najlepšieho riešenia: " + str(calculate_total_distance_for_solution(result.solution)))
         print(f"Najlepšie riešenie malo: {result.num_of_cities} miest\n"

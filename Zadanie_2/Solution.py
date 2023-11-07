@@ -13,10 +13,9 @@ class Solution_Annealing:
 
 class Solution_Tabu:
 
-    def __init__(self, num_of_cities, max_iterations, tabu_list_uses,
+    def __init__(self, num_of_cities, max_iterations,
                  solution, timer):
         self.num_of_cities = num_of_cities
         self.max_iterations = max_iterations
-        self.tabu_list_uses = tabu_list_uses
         self.solution = solution
         self.timer = timer
