@@ -56,20 +56,6 @@ def initialize_first_solution(nodes):
     return best_solution
 
 
-# def get_neighbors(solution, max_neighbours):
-#     neighbors = []
-#     while len(neighbors) <= max_neighbours:
-#         neighbor = solution.copy()
-#         pos1 = random.randint(0, 19)
-#         pos2 = random.randint(0, 19)
-#         if pos1 == pos2:
-#             pass
-#         else:
-#             neighbor[pos1], neighbor[pos2] = neighbor[pos2], neighbor[pos1]
-#             if neighbor not in neighbors:
-#                 neighbors.append(neighbor)
-#
-#     return neighbors
 
 def get_neighbors(solution):
     neighbors = []
@@ -148,7 +134,7 @@ def simulated_annealing(nodes, initial_temperature, cooling_rate, max_iterations
 
     temperature = initial_temperature
 
-    while iteration <= max_iterations:
+    while iteration <= max_iterations and temperature > 0.1:
         neighbor = random.choice(get_neighbors(current_solution))
         neighbor_distance = calculate_total_distance_for_solution(neighbor)
         distance_difference = neighbor_distance - current_distance
@@ -185,11 +171,11 @@ def start():
                 tabu_list_lenght = int(input("Zadaj velkosť tabu listu: "))
             except ValueError:
                 tabu_list_lenght = 30
-            max_iterations = 50
+            max_iterations = 5000
             result = tabu_search(nodes, tabu_list_lenght, max_iterations)
         elif mode == 2:
             max_iterations = 5000
-            result = simulated_annealing(nodes, 10000, 0.85, max_iterations)
+            result = simulated_annealing(nodes, 10000, 0.99, max_iterations)
     return result, mode
 
 
