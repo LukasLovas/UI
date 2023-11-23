@@ -1,20 +1,5 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+import torch
 
 if __name__ == "__main__":
-    pass
+    print(torch.rand(5, 3))
+
